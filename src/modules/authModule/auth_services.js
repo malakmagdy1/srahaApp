@@ -4,8 +4,6 @@ import { userModel } from "../../DB/models/user_model.js";
 import {
   ConfirmEmail,
   InvalidOtp,
-  InvalidTokenException,
-  NotFoundUrlException,
   NotValidEmailException,
   NotValidPassException,
 } from "../utils/exceptions.js";
@@ -17,7 +15,6 @@ import { compareSync } from "bcrypt";
 import { template } from "../utils/sendemail/generateHTML.js";
 import { nanoid, customAlphabet } from "nanoid";
 import { sendEmail } from "../utils/sendemail/sendEmail.js";
-
 
 export const signup = async (req, res, next) => {
   const { name, email, password, age, gender, role, phone } = req.body;
@@ -103,7 +100,8 @@ export const changepass = async (req, res, next) => {
     pass: password,
     $unset: {
       passotp: "",
-    },changedCredentialAt:Date.now()
+    },
+    changedCredentialAt: Date.now(),
   }),
     successHandler({ res });
 };
@@ -114,10 +112,31 @@ export const confirmationEmail = async (req, res, next) => {
   if (!user) {
     throw new NotValidEmailException();
   }
+
   if (user.emailotp.expiredAt <= Date.now()) {
     throw new InvalidOtp();
   }
+
+  if (user.emailotp.banExpiresAt && user.emailotp.banExpiresAt <= Date.now()) {
+    user.emailotp.failedAttempts = 0;
+    user.emailotp.banExpiresAt = null;
+    await user.save();
+  }
+
+  if (user.emailotp.failedAttempts >= 5) {
+    user.emailotp.banExpiresAt = Date.now() + 5 * 60 * 1000; // 5 minutes
+    user.emailotp.failedAttempts = 0;
+    await user.save();
+    throw new Error("Too many failed attempts. You are banned for 5 minutes.");
+  }
+
+  if (user.emailotp.banExpiresAt && user.emailotp.banExpiresAt > Date.now()) {
+    throw new Error("Too many failed attempts. Try again later.");
+  }
+
   if (!compareSync(otp, user.emailotp.otp)) {
+    user.emailotp.failedAttempts += 1; 
+    await user.save();
     throw new InvalidOtp();
   }
   await user.updateOne({ confirmed: true, $unset: { emailotp: "" } });
@@ -153,12 +172,6 @@ export const login = async (req, res, next) => {
     data: { accesstoken, refreshtoken },
     status: 200,
   });
-};
-
-export const getUserProfile = async (req, res, next) => {
-  const user = req.user;
-  req.user.phone = decryption(user.phone);
-  successHandler({ res, data: user });
 };
 
 export const refreshTokenn = async (req, res, next) => {

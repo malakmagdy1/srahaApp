@@ -49,6 +49,8 @@ const userSchema = new Schema(
     emailotp: {
       otp: { type: String },
       expiredAt: { type: Date },
+      failedAttempts:{ type: Number, default:0 },
+      banExpiresAt: { type: Date, default:null },
     },
     passotp: {
       otp: { type: String },
