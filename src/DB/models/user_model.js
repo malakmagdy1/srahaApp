@@ -1,4 +1,4 @@
-import mongoose, { Schema, model } from "mongoose";
+import mongoose, { Schema, Types, model } from "mongoose";
 
 // Enum for gender
 export const Gender = {
@@ -6,7 +6,10 @@ export const Gender = {
   female: "female",
 };
 Object.freeze(Gender);
-
+const otpSchema=new Schema({
+  otp:String,
+  expiredAt:Date
+},{_id:false})
 const userSchema = new Schema(
   {
     name: {
@@ -46,16 +49,18 @@ const userSchema = new Schema(
       type: Boolean,
       default: false,
     },
-    emailotp: {
-      otp: { type: String },
-      expiredAt: { type: Date },
-      failedAttempts:{ type: Number, default:0 },
-      banExpiresAt: { type: Date, default:null },
+    isDeleted:{
+type:Boolean,default:false
     },
-    passotp: {
-      otp: { type: String },
-      expiredAt: { type: Date },
+    DeletedBy:{
+type:Types.ObjectId,
+ref:"user"
     },
+    newEmailOtp:otpSchema,
+    oldEmailOtp:otpSchema,
+    emailotp:otpSchema,
+    passotp: otpSchema,
+
   },
   { timestamps: true }
 );

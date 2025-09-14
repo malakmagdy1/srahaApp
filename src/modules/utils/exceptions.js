@@ -31,3 +31,8 @@ export class ConfirmEmail extends Error{
         super ('confirm email first')
     }
 }
+export class UnAutorizedException extends Error{
+    constructor(){
+        super("Un Autherized")
+    }
+}
