@@ -1,7 +1,7 @@
 import jwt from "jsonwebtoken";
 import { FindById } from "../DBservices.js";
 import { userModel } from "../models/user_model.js";
-import { InvalidTokenException } from "../../modules/utils/exceptions.js";
+import { InvalidTokenException, UnAutorizedException } from "../../modules/utils/exceptions.js";
 export const tokenTypes = {
   access: "access",
   refresh: "refresh",
@@ -32,3 +32,13 @@ export const decoeToken = async ({ token, type = tokenTypes.access, next }) => {
   }
   return user;
 };
+
+export const allowTo=(...roles)=>{
+return async(req,res,next)=>{
+  const user=req.user
+  if(!roles.includes(user.role)){
+throw new UnAutorizedException()
+  }
+  next()
+}
+}

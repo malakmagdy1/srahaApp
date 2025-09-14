@@ -135,7 +135,7 @@ export const confirmationEmail = async (req, res, next) => {
   }
 
   if (!compareSync(otp, user.emailotp.otp)) {
-    user.emailotp.failedAttempts += 1; 
+    user.emailotp.failedAttempts += 1;
     await user.save();
     throw new InvalidOtp();
   }
@@ -158,7 +158,7 @@ export const login = async (req, res, next) => {
   const accesstoken = jwt.sign(
     { _id: user._id },
     process.env.ACCESS_SEGNATURE,
-    { expiresIn: "20 s" }
+    { expiresIn: "5 m" }
   );
   const refreshtoken = jwt.sign(
     { _id: user._id },
@@ -196,3 +196,56 @@ export const refreshTokenn = async (req, res, next) => {
     },
   });
 };
+
+export const updateEmail = async (req, res, next) => {
+  const user = req.user;
+  const { email } = req.body;
+  if (user.email == email) {
+    throw new Error("upadte your email with new email");
+  }
+  const isExist = await FinByEmail(email);
+  if (isExist) {
+    next(new NotValidEmailException());
+  }
+  const oldEmailotp = createOtp();
+  const oldEmailHTML = template(oldEmailotp, user.name, "confirm update email");
+  sendEmail(user.email, "confirm update email", oldEmailHTML);
+  user.oldEmailotp = {
+    otp: hash(oldEmailotp),
+    expiredAt: Date.now() + 5 * 60 * 60 * 1024,
+  };
+  const newEmailotp = createOtp();
+  const newEmailHTML = template(newEmailotp, user.name, "confirm update email");
+  sendEmail(email, "confirm update email", newEmailHTML);
+  user.newEmailotp = {
+    otp: hash(newEmailotp),
+    expiredAt: Date.now() + 5 * 60 * 60 * 1024,
+  };
+  await user.save();
+  return successHandler({ res });
+};
+
+export const createOtp = () => {
+  const custom = customAlphabet("0123456789");
+  const otp = custom(6);
+  return otp;
+};
+
+export const confirmUpdateEmail = async (req, res) => {
+  const user = req.user;
+  const { oldEmailotpp, newEmailotpp } = req.body;
+  if (
+    user.oldEmailotpp.expiredAt <= Date.now() &&
+    user.newEmailotpp.expiredAt <= Date.now()
+  ) {
+    throw new InvalidTokenException();
+  }
+  if (
+    !compare(otp, user.newEmailotpp.otp) &&
+    !compare(otp, user.newEmailotpp.otp)
+  ) {
+    throw new InvalidOtp();
+  }
+  return successHandler({ res });
+};
+
