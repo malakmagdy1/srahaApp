@@ -49,6 +49,8 @@ const userSchema = new Schema(
       type: Boolean,
       default: false,
     },
+    coverImages:[{secure_url:String,public_id:String}],
+    profileImage:{secure_url:String,public_id:String},
     isDeleted:{
 type:Boolean,default:false
     },

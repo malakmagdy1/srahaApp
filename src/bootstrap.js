@@ -3,7 +3,7 @@ import Authroute from "./modules/authModule/auth_controller.js"
 import messageRoute from "./modules/messageModule/message_controller.js"
 import Userroute from "./modules/userModule/user_controller.js"
 import { NotFoundUrlException } from "./modules/utils/exceptions.js"
-
+import multer from "multer";
 const bootStrap=async(app,express)=>{
     const port=process.env.PORT
     app.use(express.json())
@@ -11,6 +11,7 @@ const bootStrap=async(app,express)=>{
 app.use("/auth",Authroute)
 app.use("/message",messageRoute)
 app.use("/user",Userroute)
+app.use("/uploads",express.static('./uploads'))
 
 app.all("{/*s}",(req,res,next)=>{
     return next(new NotFoundUrlException())
@@ -28,4 +29,12 @@ app.listen(port,()=>{
     console.log("server running")
 })
 }
+
+const cb=(err,name)=>{
+    if(err){
+        return false
+    }else {return name}
+}
+
 export default bootStrap
+

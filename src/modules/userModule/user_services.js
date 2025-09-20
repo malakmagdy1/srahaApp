@@ -2,10 +2,14 @@ import { userModel } from "../../DB/models/user_model.js";
 import { decryption } from "../utils/crypto.js";
 import { NotValidEmailException } from "../utils/exceptions.js";
 import { successHandler } from "../utils/successhandler.js";
+import fs from 'fs/promises'
+import { destroySingleFile, uploadMultiFiles, uploadSingleFile } from "../utils/multer/cloud_services.js";
+import cloudinary from "../utils/multer/cloudConfig.js";
+
 
 export const getUserProfile = async (req, res, next) => {
   const id=req.params.id
-  const user=await userModel.findOne({_id:id,isDeleted:false}).select("name email phone")
+  const user=await userModel.findOne({_id:id,isDeleted:false}).select("name email phone profileImage")
   if(!user){
     next (new NotValidEmailException() )  
   }
@@ -63,4 +67,32 @@ export const hardDelete=async(req,res)=>{
 const  user=req.user
   await user.deleteOne()
   return successHandler({res})
+}
+
+export const profileImage=async(req,res,next)=>{
+ const user=req.user
+ const oldpic=user.profileImage?.public_id
+ const{secure_url,public_id}= await uploadSingleFile({path:req.file.path,dest:`users/${user.id}/profile_images`})
+
+ if(oldpic){
+  await destroySingleFile({ public_id: oldpic })
+ }
+  // const path=`${req.file.destination}/${req.file.filename}`
+  // if(user.profileImage){
+  //   await fs.unlink(path)
+  // }
+  // user.profileImage=path
+   user.profileImage={secure_url,public_id}
+   await user.save()
+  successHandler({res})
+}
+export const coverImage=async(req,res,next)=>{
+  const user=req.user
+  const files=req.files
+  const paths=[]
+  req.files.map(file=>{paths.push(file.path)})
+  const coverImages=await uploadMultiFiles({paths,dest:`users/${user.id}/cover_images`})
+  user.coverImages.push(...coverImages)
+  await user.save()
+  successHandler({res,user})
 }
